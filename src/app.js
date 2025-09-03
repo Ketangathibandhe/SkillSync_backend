@@ -10,7 +10,7 @@ app.use(cookieParser());
 const cors = require("cors");
 app.use(cors({
   // origin:"http://localhost:5173",
-  origin:"https://skill-sync-frontend-lyart.vercel.app/login",
+  origin:"https://skill-sync-frontend-lyart.vercel.app",
    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   credentials:true,
 }))
