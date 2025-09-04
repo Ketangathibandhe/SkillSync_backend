@@ -60,13 +60,29 @@ authRouter.post("/login", async (req, res) => {
   }
 });
 
+// authRouter.post("/logout", async (req, res) => {
+//   try {
+//     res
+//       .cookie("token", null, { expires: new Date(Date.now()) })
+//       .send("Logged out successfully..");
+//   } catch (error) {
+//     res.status(400).send("something went wrong " + error.message);
+//   }
+// });
+
+
 authRouter.post("/logout", async (req, res) => {
   try {
-    res
-      .cookie("token", null, { expires: new Date(Date.now()) })
-      .send("Logged out successfully..");
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      path: "/", //  Must match original cookie path
+    });
+    res.status(200).send("Logged out successfully..");
   } catch (error) {
-    res.status(400).send("something went wrong " + error.message);
+    res.status(400).send("Something went wrong: " + error.message);
   }
 });
+
 module.exports = authRouter;
