@@ -21,8 +21,9 @@ authRouter.post("/signup", async (req, res) => {
     const token = await savedUser.getJWT();
     res.cookie("token", token, {
       httpOnly: true,
-      secure: true, 
+      secure: true,
       sameSite: "None",
+      path: "/",
       expires: new Date(Date.now() + 8 * 3600000),
     });
 
@@ -47,6 +48,7 @@ authRouter.post("/login", async (req, res) => {
         expires: new Date(Date.now() + 8 * 3600000),
         httpOnly: true,
         secure: true,
+        path: "/",
         sameSite: "None",
       });
       res.json({ message: "loggedin...", user });
