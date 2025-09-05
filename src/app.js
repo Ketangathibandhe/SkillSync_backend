@@ -19,7 +19,8 @@ app.use(cors({
   origin: function (origin, callback) {
     const allowedOrigins = [
       "https://skill-sync-frontend-lyart.vercel.app",
-      "http://localhost:5173"
+      "http://localhost:5173",
+      "https://skillsync-frontend-uhkz.onrender.com"
     ];
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
