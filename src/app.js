@@ -3,24 +3,19 @@ require("dotenv").config();
 const express = require("express");
 const { connectDB } = require("./config/database");
 const cookieParser = require("cookie-parser");
+const cors = require("cors");
 
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
-const cors = require("cors");
-// app.use(cors({
-//   // origin:"http://localhost:5173",
-//   origin:"https://skill-sync-frontend-lyart.vercel.app" ||"http://localhost:5173",
-//    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-//   credentials:true,
-// }))
 
+//  CORS setup
 app.use(cors({
   origin: function (origin, callback) {
     const allowedOrigins = [
-      "https://skill-sync-frontend-lyart.vercel.app",
-      "http://localhost:5173",
-      "https://skillsync-frontend-uhkz.onrender.com"
+      "https://skill-sync-frontend-lyart.vercel.app",  // Vercel FE
+      "http://localhost:5173",                         // Local dev
+      "https://skillsync-frontend-uhkz.onrender.com"   // Render FE
     ];
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
@@ -31,7 +26,16 @@ app.use(cors({
   credentials: true,
 }));
 
+//  Allow credentials header
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
+
+//  Required for secure cookies on Render
 app.set("trust proxy", 1);
+
 //  Routes import
 const authRouter = require("./routes/auth");
 const profileRouter = require("./routes/profile");

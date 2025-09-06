@@ -3,85 +3,67 @@ const User = require("../models/user");
 const authRouter = express.Router();
 const { validateSignUpData } = require("../utils/validation");
 const bcrypt = require("bcrypt");
-//Sign up api
+
+//  Common cookie config
+const cookieOptions = {
+  httpOnly: true,
+  secure: true,       // Render/Vercel are HTTPS → keep true
+  sameSite: "None",   // allow cross-site cookies
+  path: "/",          // must match across set/clear
+  maxAge: 8 * 3600000 // 8 hours
+};
+
+//  SIGNUP
 authRouter.post("/signup", async (req, res) => {
   try {
-    //validation of data
     validateSignUpData(req);
-    //encrypt the password
+
     const { firstName, lastName, emailId, password } = req.body;
     const passwordHash = await bcrypt.hash(password, 10);
+
     const user = new User({
       firstName,
       lastName,
       emailId,
       password: passwordHash,
     });
+
     const savedUser = await user.save();
     const token = await savedUser.getJWT();
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      path: "/",
-      expires: new Date(Date.now() + 8 * 3600000),
-    });
 
+    res.cookie("token", token, cookieOptions);
     res.json({ message: "User added successfully!", data: savedUser });
   } catch (error) {
-    res.status(400).send("Error saving the user :" + error.message);
+    res.status(400).send("Error saving the user: " + error.message);
   }
 });
 
+//  LOGIN
 authRouter.post("/login", async (req, res) => {
   try {
     const { emailId, password } = req.body;
     const user = await User.findOne({ emailId });
-    console.log(user);
-    if (!user) {
-      throw new Error("Invalid credential");
-    }
+
+    if (!user) throw new Error("Invalid credentials");
+
     const isPasswordValid = await user.validatePassword(password);
-    if (isPasswordValid) {
-      const token = await user.getJWT();
-      res.cookie("token", token, {
-        expires: new Date(Date.now() + 8 * 3600000),
-        httpOnly: true,
-        secure: true,
-        path: "/",
-        sameSite: "None",
-      });
-      res.json({ message: "loggedin...", user });
-    } else {
-      throw new Error("Invalid credentials...");
-    }
+    if (!isPasswordValid) throw new Error("Invalid credentials");
+
+    const token = await user.getJWT();
+    res.cookie("token", token, cookieOptions);
+    res.json({ message: "Logged in successfully!", user });
   } catch (error) {
-    res.status(400).send("Something went wrong...." + error.message);
+    res.status(400).send("Login failed: " + error.message);
   }
 });
 
-// authRouter.post("/logout", async (req, res) => {
-//   try {
-//     res
-//       .cookie("token", null, { expires: new Date(Date.now()) })
-//       .send("Logged out successfully..");
-//   } catch (error) {
-//     res.status(400).send("something went wrong " + error.message);
-//   }
-// });
-
-
+//  LOGOUT
 authRouter.post("/logout", async (req, res) => {
   try {
-    res.clearCookie("token", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      path: "/", //  Must match original cookie path
-    });
+    res.clearCookie("token", cookieOptions);
     res.status(200).send("Logged out successfully..");
   } catch (error) {
-    res.status(400).send("Something went wrong: " + error.message);
+    res.status(400).send("Logout failed: " + error.message);
   }
 });
 
