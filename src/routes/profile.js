@@ -49,7 +49,7 @@ profileRouter.put("/profile/edit", userAuth, async (req, res) => {
     });
     console.log("Incoming PUT /profile/edit request:", req.body);
   } catch (err) {
-    res.status(400).send("Error :" + err.message);
+    res.status(400).send(err.message);
   }
 });
 
