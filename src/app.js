@@ -15,7 +15,8 @@ app.use(cors({
     const allowedOrigins = [
       "https://skill-sync-frontend-lyart.vercel.app",  // Vercel FE
       "http://localhost:5173",                         // Local dev
-      "https://skillsync-frontend-uhkz.onrender.com"   // Render FE
+      "https://skillsync-frontend-uhkz.onrender.com" ,  // Render FE
+      "https://skillsync-6v8s.onrender.com"
     ];
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
