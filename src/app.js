@@ -9,15 +9,16 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
-//  CORS setup
+// allowed origins list
+const allowedOrigins = [
+  "https://skillsync-6v8s.onrender.com",
+  "http://localhost:5173",
+  "https://skillsync-frontend-uhkz.onrender.com"
+];
+
+// CORS middleware
 app.use(cors({
   origin: function (origin, callback) {
-    const allowedOrigins = [
-      "https://skill-sync-frontend-lyart.vercel.app",  // Vercel FE
-      "http://localhost:5173",                         // Local dev
-      "https://skillsync-frontend-uhkz.onrender.com" ,  // Render FE
-      "https://skillsync-6v8s.onrender.com"
-    ];
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -25,29 +26,38 @@ app.use(cors({
     }
   },
   credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // allowed methods
+  allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept"], // allowed headers
 }));
 
-//  Allow credentials header
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  next();
-});
+// Handle preflight requests for all routes
+app.options("*", cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept"],
+}));
 
 //  Required for secure cookies on Render
 app.set("trust proxy", 1);
 
-//  Routes import
+// Routes import
 const authRouter = require("./routes/auth");
 const profileRouter = require("./routes/profile");
 const aiRoutes = require("./routes/ai.routes");
 
-//  Routes use
+// Routes use
 app.use("/api/auth", authRouter);
 app.use("/api/profile", profileRouter);
 app.use("/api/ai", aiRoutes);
 
-//  DB connect + Server run
+// DB connect + Server run
 connectDB()
   .then(() => {
     console.log("Database connection established...");
