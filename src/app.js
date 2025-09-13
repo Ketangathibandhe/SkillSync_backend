@@ -9,14 +9,14 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
-//  Allowed origins list
+// Allowed origins list
 const allowedOrigins = [
   "https://skillsync-6v8s.onrender.com",       // Main deployed frontend
   "http://localhost:5173",                     // Local dev
-  "https://skillsync-frontend-uhkz.onrender.com" 
+  "https://skillsync-frontend-uhkz.onrender.com" // Other deployed frontend
 ];
 
-//  Common CORS options
+// Common CORS options
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -30,13 +30,10 @@ const corsOptions = {
   allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept"],
 };
 
-// Apply CORS middleware globally
+// Apply CORS middleware globally (handles OPTIONS automatically)
 app.use(cors(corsOptions));
 
-//  Handle preflight requests for all routes (Express 5 safe)
-app.options("/*", cors(corsOptions));
-
-//  Required for secure cookies on Render
+// Required for secure cookies on Render
 app.set("trust proxy", 1);
 
 // Routes import 
