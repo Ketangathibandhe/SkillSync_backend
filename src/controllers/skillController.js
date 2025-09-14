@@ -349,19 +349,13 @@ Rules:
   const data = await response.json();
   let rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
 
-  // Clean rawText before parsing
-  rawText = rawText
-    .replace(/```json/g, "")
-    .replace(/```/g, "")
-    .trim();
+  rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
 
   let parsed;
   try {
     parsed = JSON.parse(rawText);
   } catch (err) {
     console.error("Skill gap JSON parse failed:", err);
-
-    // Fallback: extract first valid JSON block using regex and sanitize
     const match = rawText.match(/\{[\s\S]*\}/);
     try {
       const cleaned = match?.[0]
@@ -381,20 +375,21 @@ Rules:
 // Helper: Roadmap Generation (with bulletproof parsing)
 const getRoadmapFromModel = async (targetRole, skillGap) => {
   const prompt = `
+You are an expert career mentor.
 Create a comprehensive and detailed learning roadmap for becoming a ${targetRole}.
-Base it on the following skill gap:
+Base it strictly on the following skill gap JSON:
 ${JSON.stringify(skillGap)}
 
 Important instructions:
 - Respond ONLY with valid JSON (no backticks, no markdown, no explanation).
 - Include at least 6-8 steps (phases).
-- Each step should have:
-  - "title": short clear name
-  - "duration": realistic time estimate (e.g. "2-4 weeks")
-  - "topics": a detailed list of subtopics (minimum 4–6 items)
-  - "resources": at least 3 high-quality resources (courses, books, articles, videos)
-  - "projects": at least 1–2 practical projects per step
-  - "status": default as "pending"
+- Each step must have:
+  "title": short clear name,
+  "duration": realistic time estimate (e.g. "2-4 weeks"),
+  "topics": a detailed list of subtopics (minimum 4–6 items),
+  "resources": at least 3 high-quality resources (courses, books, articles, videos),
+  "projects": at least 1–2 practical projects per step,
+  "status": default as "pending"
 
 Format strictly like this:
 
@@ -426,19 +421,13 @@ Format strictly like this:
   const data = await response.json();
   let rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
 
-  // Clean rawText before parsing
-  rawText = rawText
-    .replace(/```json/g, "")
-    .replace(/```/g, "")
-    .trim();
+  rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
 
   let parsed;
   try {
     parsed = JSON.parse(rawText);
   } catch (err) {
     console.error("Roadmap JSON parse failed:", err);
-
-    // Fallback: extract first valid JSON block using regex and sanitize
     const match = rawText.match(/\{[\s\S]*\}/);
     try {
       const cleaned = match?.[0]
@@ -485,13 +474,14 @@ const generateRoadmap = async (req, res) => {
       return res.status(400).json({ error: "Invalid input" });
     }
 
-    // Step 1: Get skill gap
     const skillGap = await getSkillGapFromModel(targetRole, currentSkills);
-
-    // Step 2: Get roadmap steps
     const { steps, rawText } = await getRoadmapFromModel(targetRole, skillGap);
 
-    // Step 3: Save roadmap
+    if (!steps.length) {
+      console.error("No steps generated. Raw output:", rawText);
+      return res.status(500).json({ error: "Failed to generate roadmap" });
+    }
+
     const roadmap = new Roadmap({
       userId,
       targetRole,
@@ -499,12 +489,11 @@ const generateRoadmap = async (req, res) => {
       skillGap,
       steps,
       rawText,
-      progress: 0, // initial progress
+      progress: 0,
     });
 
     await roadmap.save();
 
-    // Step 4: Link roadmap to user
     await User.findByIdAndUpdate(userId, {
       $push: { roadmaps: roadmap._id },
     });
