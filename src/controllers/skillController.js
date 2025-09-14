@@ -1,498 +1,58 @@
-// const User = require("../models/user");
-// const Roadmap = require("../models/roadmap");
-
-// const GEMINI_API_URL =
-//   "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
-
-// // Helper: Skill Gap Analysis
-// const getSkillGapFromModel = async (targetRole, currentSkills) => {
-//   const prompt = `
-// You're an expert career mentor helping someone become a ${targetRole}.
-// Current skills: ${currentSkills.join(", ")}.
-
-// Please return the response in clean Markdown format with clear structure:
-// - Use plain text headings like:  Missing Skills and  Learning Priorities
-// - Make each heading visually distinct 
-// - Use simple numbered list (1., 2., etc.) for bullet points, no asterisks (*)
-// - Use numbered list (1., 2., etc.) for priorities
-// - Do NOT use markdown symbols like # or *
-// - Do NOT include any intro or closing statements
-
-// Respond only with Markdown. Keep it visually clean, readable, and scannable.
-// `;
-
-//   const response = await fetch(
-//     `${GEMINI_API_URL}?key=${process.env.GEMINI_API_KEY}`,
-//     {
-//       method: "POST",
-//       headers: { "Content-Type": "application/json" },
-//       body: JSON.stringify({
-//         contents: [{ parts: [{ text: prompt }] }],
-//       }),
-//     }
-//   );
-
-//   const data = await response.json();
-//   return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
-// };
-
-// // Helper: Roadmap Generation (with bulletproof parsing)
-// const getRoadmapFromModel = async (targetRole, skillGap) => {
-//   const prompt = `
-// Create a **comprehensive and detailed learning roadmap** for becoming a ${targetRole}.
-// Base it on the following skill gap:
-// ${skillGap}
-
-//  Important instructions:
-// - Respond ONLY with valid JSON (no backticks, no markdown, no explanation).
-// - Include at least 6-8 steps (phases).
-// - Each step should have:
-//   - "title": short clear name
-//   - "duration": realistic time estimate (e.g. "2-4 weeks")
-//   - "topics": a detailed list of subtopics (minimum 4–6 items)
-//   - "resources": at least 3 high-quality resources (courses, books, articles, videos)
-//   - "projects": at least 1–2 practical projects per step
-//   - "status": default as "pending"
-
-// Format strictly like this:
-
-// {
-//   "steps": [
-//     {
-//       "title": "Step Title",
-//       "duration": "2-3 weeks",
-//       "topics": ["Topic 1", "Topic 2", "Topic 3"],
-//       "resources": ["Resource 1", "Resource 2", "Resource 3"],
-//       "projects": ["Project 1"],
-//       "status": "pending"
-//     }
-//   ]
-// }
-// `;
-
-//   const response = await fetch(
-//     `${GEMINI_API_URL}?key=${process.env.GEMINI_API_KEY}`,
-//     {
-//       method: "POST",
-//       headers: { "Content-Type": "application/json" },
-//       body: JSON.stringify({
-//         contents: [{ parts: [{ text: prompt }] }],
-//       }),
-//     }
-//   );
-
-//   const data = await response.json();
-//   let rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
-
-//   // Clean rawText before parsing
-//   rawText = rawText
-//     .replace(/```json/g, "")
-//     .replace(/```/g, "")
-//     .trim();
-
-//   let parsed;
-//   try {
-//     parsed = JSON.parse(rawText);
-//   } catch (err) {
-//     console.error("Roadmap JSON parse failed:", err);
-
-//     // Fallback: extract first valid JSON block using regex and sanitize
-//     const match = rawText.match(/\{[\s\S]*\}/);
-//     try {
-//       const cleaned = match?.[0]
-//         ?.replace(/'/g, '"')
-//         ?.replace(/,\s*}/g, "}")
-//         ?.replace(/,\s*]/g, "]");
-//       parsed = cleaned ? JSON.parse(cleaned) : { steps: [] };
-//     } catch (fallbackErr) {
-//       console.error("Fallback parse also failed:", fallbackErr);
-//       parsed = { steps: [] };
-//     }
-//   }
-
-//   return { steps: parsed.steps || [], rawText };
-// };
-
-// // API 1: Skill Gap Analysis
-// const analyzeSkillGap = async (req, res) => {
-//   try {
-//     const { targetRole, currentSkills } = req.body;
-
-//     if (!targetRole || !Array.isArray(currentSkills)) {
-//       return res.status(400).json({ error: "Invalid input" });
-//     }
-
-//     const gap = await getSkillGapFromModel(targetRole, currentSkills);
-
-//     res.json({
-//       gapAnalysis: gap || "No response from model",
-//     });
-//   } catch (err) {
-//     console.error("Skill gap error:", err);
-//     res.status(500).json({ error: "Failed to analyze skill gap" });
-//   }
-// };
-
-// // API 2: Roadmap Creation
-// const generateRoadmap = async (req, res) => {
-//   try {
-//     const { targetRole, currentSkills } = req.body;
-//     const userId = req.user?._id;
-
-//     if (!userId || !targetRole || !Array.isArray(currentSkills)) {
-//       return res.status(400).json({ error: "Invalid input" });
-//     }
-
-//     // Step 1: Get skill gap
-//     const skillGap = await getSkillGapFromModel(targetRole, currentSkills);
-
-//     // Step 2: Get roadmap steps
-//     const { steps, rawText } = await getRoadmapFromModel(targetRole, skillGap);
-
-//     // Step 3: Save roadmap
-//     const roadmap = new Roadmap({
-//       userId,
-//       targetRole,
-//       currentSkills,
-//       skillGap,
-//       steps,
-//       rawText,
-//       progress: 0, //  initial progress
-//     });
-
-//     await roadmap.save();
-
-//     // Step 4: Link roadmap to user
-//     await User.findByIdAndUpdate(userId, {
-//       $push: { roadmaps: roadmap._id },
-//     });
-
-//     res.status(201).json({ success: true, roadmap });
-//   } catch (err) {
-//     console.error("Roadmap creation error:", err);
-//     res.status(500).json({ error: "Failed to generate roadmap" });
-//   }
-// };
-
-// // API 3: Roadmap Fetch by ID
-// const getRoadmapById = async (req, res) => {
-//   try {
-//     const userId = req.user?._id;
-//     const roadmapId = req.params.id;
-
-//     if (!userId || !roadmapId) {
-//       return res.status(400).json({ error: "Missing userId or roadmapId" });
-//     }
-
-//     const roadmap = await Roadmap.findOne({ _id: roadmapId, userId });
-
-//     if (!roadmap) {
-//       return res.status(404).json({ error: "Roadmap not found" });
-//     }
-
-//     res.status(200).json({ roadmap });
-//   } catch (err) {
-//     console.error("Roadmap fetch by ID error:", err);
-//     res.status(500).json({ error: "Failed to fetch roadmap" });
-//   }
-// };
-
-// // API 4: All roadmaps for logged-in user (sidebar)
-// const getUserRoadmaps = async (req, res) => {
-//   try {
-//     const userId = req.user?._id;
-//     if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
-//     const roadmaps = await Roadmap.find({ userId })
-//       .select("_id targetRole progress createdAt updatedAt")
-//       .sort({ createdAt: -1 });
-
-//     res.status(200).json({ roadmaps });
-//   } catch (err) {
-//     console.error("User roadmaps list error:", err);
-//     res.status(500).json({ error: "Failed to fetch user roadmaps" });
-//   }
-// };
-
-// // API 5: Latest roadmap for logged-in user (default load)
-// const getLatestRoadmap = async (req, res) => {
-//   try {
-//     const userId = req.user?._id;
-//     if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
-//     const roadmap = await Roadmap.findOne({ userId }).sort({ createdAt: -1 });
-//     if (!roadmap) return res.status(404).json({ error: "No roadmaps found" });
-
-//     res.status(200).json({ roadmap });
-//   } catch (err) {
-//     console.error("Latest roadmap fetch error:", err);
-//     res.status(500).json({ error: "Failed to fetch latest roadmap" });
-//   }
-// };
-
-// // API 6: Delete roadmap by ID
-// const deleteRoadmapById = async (req, res) => {
-//   try {
-//     const userId = req.user?._id;
-//     const roadmapId = req.params.id;
-
-//     if (!userId || !roadmapId) {
-//       return res.status(400).json({ error: "Missing userId or roadmapId" });
-//     }
-
-//     // Find and delete roadmap owned by this user
-//     const roadmap = await Roadmap.findOneAndDelete({ _id: roadmapId, userId });
-
-//     if (!roadmap) {
-//       return res.status(404).json({ error: "Roadmap not found" });
-//     }
-
-//     // Remove roadmap reference from User document
-//     await User.findByIdAndUpdate(userId, {
-//       $pull: { roadmaps: roadmapId },
-//     });
-
-//     res.status(200).json({ success: true, message: "Roadmap deleted successfully" });
-//   } catch (err) {
-//     console.error("Roadmap delete error:", err);
-//     res.status(500).json({ error: "Failed to delete roadmap" });
-//   }
-// };
-
-// // API 7: Update step status & recalc progress
-// const updateStepStatus = async (req, res) => {
-//   try {
-//     const userId = req.user?._id;
-//     const { roadmapId, stepIndex, status } = req.body;
-
-//     if (!userId || roadmapId == null || stepIndex == null || !status) {
-//       return res.status(400).json({ error: "Missing required fields" });
-//     }
-
-//     const roadmap = await Roadmap.findOne({ _id: roadmapId, userId });
-//     if (!roadmap) {
-//       return res.status(404).json({ error: "Roadmap not found" });
-//     }
-
-//     // Update step status
-//     if (!roadmap.steps[stepIndex]) {
-//       return res.status(400).json({ error: "Invalid step index" });
-//     }
-//     roadmap.steps[stepIndex].status = status;
-
-//     // Recalculate progress
-//     const totalSteps = roadmap.steps.length;
-//     const completedSteps = roadmap.steps.filter(s => s.status === "completed").length;
-//     roadmap.progress = Math.round((completedSteps / totalSteps) * 100);
-
-//     await roadmap.save();
-
-//     res.status(200).json({ success: true, roadmap });
-//   } catch (err) {
-//     console.error("Update step status error:", err);
-//     res.status(500).json({ error: "Failed to update step status" });
-//   }
-// };
-
-// module.exports = {
-//   analyzeSkillGap,
-//   generateRoadmap,
-//   getRoadmapById,
-//   getUserRoadmaps,   
-//   getLatestRoadmap,
-//   deleteRoadmapById,
-//   updateStepStatus
-// };
-
-
 const User = require("../models/user");
 const Roadmap = require("../models/roadmap");
 
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
-// Toggle extra logs in server console, never sent to client unless DEBUG_AI_RESPONSE=true
-const DEBUG_AI = process.env.DEBUG_AI === "true";
-const DEBUG_AI_RESPONSE = process.env.DEBUG_AI_RESPONSE === "true"; // return raw in response for testing only
-
-// ---------- Utilities ----------
-
-const postToModel = async (prompt, config = {}) => {
-  let data;
-  try {
-    const response = await fetch(
-      `${GEMINI_API_URL}?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.25,
-            topP: 0.9,
-            topK: 40,
-            maxOutputTokens: 3072,
-            ...config,
-          },
-        }),
-      }
-    );
-
-    data = await response.json();
-
-    if (!response.ok) {
-      console.error("Model API error:", response.status, data);
-      throw new Error(`Model API error: ${response.status}`);
-    }
-  } catch (e) {
-    console.error("Model request failed:", e?.message);
-    throw new Error("Upstream model request failed");
-  }
-
-  let raw =
-    data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
-    data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-    "";
-
-  // Clean fenced code if present
-  raw = String(raw).replace(/```json/gi, "").replace(/```/g, "").trim();
-
-  if (DEBUG_AI) {
-    console.log("MODEL RAW (first 600):\n", raw.slice(0, 600));
-  }
-
-  return raw;
-};
-
-const safeParseJson = (raw) => {
-  if (!raw || typeof raw !== "string") return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) return null;
-    const cleaned = match[0]
-      .replace(/,\s*}/g, "}")
-      .replace(/,\s*]/g, "]")
-      .replace(/‘|’|“|”/g, '"')
-      .replace(/'/g, '"');
-    try {
-      return JSON.parse(cleaned);
-    } catch {
-      return null;
-    }
-  }
-};
-
-const toStringArray = (val) => {
-  if (!val) return [];
-  if (Array.isArray(val)) {
-    return val
-      .map((item) => {
-        if (item == null) return null;
-        if (typeof item === "string") return item.trim();
-        if (typeof item === "number" || typeof item === "boolean")
-          return String(item);
-        if (typeof item === "object") {
-          if (item.title && item.url) return `${item.title} - ${item.url}`;
-          if (item.name && item.link) return `${item.name} - ${item.link}`;
-          try {
-            return JSON.stringify(item);
-          } catch {
-            return String(item);
-          }
-        }
-        return String(item);
-      })
-      .filter((s) => s && s.length > 0);
-  }
-  return [typeof val === "string" ? val.trim() : String(val)];
-};
-
-const normalizeRoadmapSteps = (steps) => {
-  if (!Array.isArray(steps)) return [];
-  return steps
-    .map((s) => {
-      const title =
-        typeof s?.title === "string" && s.title.trim().length > 0
-          ? s.title.trim()
-          : null;
-      const duration =
-        typeof s?.duration === "string" && s.duration.trim().length > 0
-          ? s.duration.trim()
-          : "1-3 weeks";
-      const topics = toStringArray(s?.topics);
-      const resources = toStringArray(s?.resources);
-      const projects = toStringArray(s?.projects);
-      const status =
-        typeof s?.status === "string" && s.status.trim().length > 0
-          ? s.status.trim()
-          : "pending";
-      if (!title) return null;
-      return { title, duration, topics, resources, projects, status };
-    })
-    .filter(Boolean);
-};
-
-// ---------- Helper: Skill Gap Analysis (JSON structured) ----------
+// Helper: Skill Gap Analysis
 const getSkillGapFromModel = async (targetRole, currentSkills) => {
   const prompt = `
-You are an expert career mentor helping someone become a ${targetRole}.
+You're an expert career mentor helping someone become a ${targetRole}.
 Current skills: ${currentSkills.join(", ")}.
 
-Return ONLY valid JSON (no markdown, no backticks, no extra text).
-The JSON must have exactly this structure:
+Please return the response in clean Markdown format with clear structure:
+- Use plain text headings like:  Missing Skills and  Learning Priorities
+- Make each heading visually distinct 
+- Use simple numbered list (1., 2., etc.) for bullet points, no asterisks (*)
+- Use numbered list (1., 2., etc.) for priorities
+- Do NOT use markdown symbols like # or *
+- Do NOT include any intro or closing statements
 
-{
-  "missingSkills": ["Skill 1", "Skill 2", "Skill 3"],
-  "learningPriorities": ["Priority 1", "Priority 2", "Priority 3"]
-}
+Respond only with Markdown. Keep it visually clean, readable, and scannable.
+`;
 
-Rules:
-- "missingSkills" must be a list of concrete, atomic skills (strings only).
-- "learningPriorities" must be a list of actionable priorities in order (strings only).
-- Do NOT include any explanation, intro, or closing text.
-- Output must be strictly valid JSON.
-`.trim();
-
-  const raw = await postToModel(prompt);
-  let parsed = safeParseJson(raw);
-
-  if (
-    !parsed ||
-    !Array.isArray(parsed.missingSkills) ||
-    !Array.isArray(parsed.learningPriorities)
-  ) {
-    if (DEBUG_AI) {
-      console.warn("Skill gap malformed; defaulting to empty arrays.");
+  const response = await fetch(
+    `${GEMINI_API_URL}?key=${process.env.GEMINI_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+      }),
     }
-    return { missingSkills: [], learningPriorities: [] };
-  }
+  );
 
-  parsed.missingSkills = toStringArray(parsed.missingSkills);
-  parsed.learningPriorities = toStringArray(parsed.learningPriorities);
-
-  return parsed;
+  const data = await response.json();
+  return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
 };
 
-// ---------- Helper: Roadmap Generation (stringified gap, robust parsing) ----------
-const getRoadmapFromModel = async (targetRole, skillGapString) => {
+// Helper: Roadmap Generation (with bulletproof parsing)
+const getRoadmapFromModel = async (targetRole, skillGap) => {
   const prompt = `
-You are an expert career mentor.
-Create a comprehensive, phased learning roadmap for becoming a ${targetRole}.
-Base it strictly on the following skill gap:
-${skillGapString}
+Create a **comprehensive and detailed learning roadmap** for becoming a ${targetRole}.
+Base it on the following skill gap:
+${skillGap}
 
-Respond ONLY with valid JSON (no backticks, no markdown, no explanation).
-Include at least 6 steps in the "steps" array.
-Each step must include:
-- "title": short, clear
-- "duration": realistic time (e.g., "2-4 weeks")
-- "topics": 4–6 focused subtopics (strings only)
-- "resources": at least 3 high-quality resources (strings: include title and source)
-- "projects": 1–2 practical projects (strings only)
-- "status": set to "pending"
+ Important instructions:
+- Respond ONLY with valid JSON (no backticks, no markdown, no explanation).
+- Include at least 6-8 steps (phases).
+- Each step should have:
+  - "title": short clear name
+  - "duration": realistic time estimate (e.g. "2-4 weeks")
+  - "topics": a detailed list of subtopics (minimum 4–6 items)
+  - "resources": at least 3 high-quality resources (courses, books, articles, videos)
+  - "projects": at least 1–2 practical projects per step
+  - "status": default as "pending"
 
 Format strictly like this:
 
@@ -501,45 +61,59 @@ Format strictly like this:
     {
       "title": "Step Title",
       "duration": "2-3 weeks",
-      "topics": ["Topic 1", "Topic 2", "Topic 3", "Topic 4"],
+      "topics": ["Topic 1", "Topic 2", "Topic 3"],
       "resources": ["Resource 1", "Resource 2", "Resource 3"],
       "projects": ["Project 1"],
       "status": "pending"
     }
   ]
 }
-`.trim();
+`;
 
-  const raw = await postToModel(prompt);
-  let parsed = safeParseJson(raw) || { steps: [] };
-  let steps = normalizeRoadmapSteps(parsed?.steps);
-
-  // One controlled retry with stricter temperature if first pass fails
-  if (!steps.length) {
-    if (DEBUG_AI) {
-      console.warn("Roadmap: first pass returned no steps. Retrying (temp=0.1)...");
+  const response = await fetch(
+    `${GEMINI_API_URL}?key=${process.env.GEMINI_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+      }),
     }
-    const rawRetry = await postToModel(prompt, { temperature: 0.1 });
-    const parsedRetry = safeParseJson(rawRetry) || { steps: [] };
-    steps = normalizeRoadmapSteps(parsedRetry?.steps);
+  );
 
-    if (!steps.length) {
-      // Keep first raw in case both fail (usually enough to debug)
-      if (DEBUG_AI) {
-        console.error(
-          "Roadmap: retry also returned no steps.\nRAW(first pass, first 800):",
-          raw.slice(0, 800)
-        );
-      }
-      return { steps: [], rawText: raw };
+  const data = await response.json();
+  let rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+
+  // Clean rawText before parsing
+  rawText = rawText
+    .replace(/```json/g, "")
+    .replace(/```/g, "")
+    .trim();
+
+  let parsed;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch (err) {
+    console.error("Roadmap JSON parse failed:", err);
+
+    // Fallback: extract first valid JSON block using regex and sanitize
+    const match = rawText.match(/\{[\s\S]*\}/);
+    try {
+      const cleaned = match?.[0]
+        ?.replace(/'/g, '"')
+        ?.replace(/,\s*}/g, "}")
+        ?.replace(/,\s*]/g, "]");
+      parsed = cleaned ? JSON.parse(cleaned) : { steps: [] };
+    } catch (fallbackErr) {
+      console.error("Fallback parse also failed:", fallbackErr);
+      parsed = { steps: [] };
     }
-    return { steps, rawText: rawRetry };
   }
 
-  return { steps, rawText: raw };
+  return { steps: parsed.steps || [], rawText };
 };
 
-// ---------- API 1: Skill Gap Analysis ----------
+// API 1: Skill Gap Analysis
 const analyzeSkillGap = async (req, res) => {
   try {
     const { targetRole, currentSkills } = req.body;
@@ -551,7 +125,7 @@ const analyzeSkillGap = async (req, res) => {
     const gap = await getSkillGapFromModel(targetRole, currentSkills);
 
     res.json({
-      gapAnalysis: gap,
+      gapAnalysis: gap || "No response from model",
     });
   } catch (err) {
     console.error("Skill gap error:", err);
@@ -559,7 +133,7 @@ const analyzeSkillGap = async (req, res) => {
   }
 };
 
-// ---------- API 2: Roadmap Creation ----------
+// API 2: Roadmap Creation
 const generateRoadmap = async (req, res) => {
   try {
     const { targetRole, currentSkills } = req.body;
@@ -569,41 +143,29 @@ const generateRoadmap = async (req, res) => {
       return res.status(400).json({ error: "Invalid input" });
     }
 
-    // 1) Skill gap (JSON for storage/UI)
+    // Step 1: Get skill gap
     const skillGap = await getSkillGapFromModel(targetRole, currentSkills);
 
-    // 2) For the model, pass gap as string to preserve previous behavior
-    const { steps, rawText } = await getRoadmapFromModel(
-      targetRole,
-      JSON.stringify(skillGap)
-    );
+    // Step 2: Get roadmap steps
+    const { steps, rawText } = await getRoadmapFromModel(targetRole, skillGap);
 
-    if (!Array.isArray(steps) || steps.length === 0) {
-      // Optional: return rawText to client for one-off debugging (guarded by env)
-      if (DEBUG_AI_RESPONSE) {
-        return res.status(500).json({
-          error: "Failed to generate roadmap",
-          debugRaw: rawText?.slice(0, 1200) || "",
-        });
-      }
-      return res.status(500).json({ error: "Failed to generate roadmap" });
-    }
-
-    // 3) Save
+    // Step 3: Save roadmap
     const roadmap = new Roadmap({
       userId,
       targetRole,
       currentSkills,
-      skillGap, // store JSON
-      steps,    // normalized arrays of strings
-      rawText,  // last model response for audit
-      progress: 0,
+      skillGap,
+      steps,
+      rawText,
+      progress: 0, //  initial progress
     });
 
     await roadmap.save();
 
-    // 4) Link to user
-    await User.findByIdAndUpdate(userId, { $push: { roadmaps: roadmap._id } });
+    // Step 4: Link roadmap to user
+    await User.findByIdAndUpdate(userId, {
+      $push: { roadmaps: roadmap._id },
+    });
 
     res.status(201).json({ success: true, roadmap });
   } catch (err) {
@@ -612,7 +174,7 @@ const generateRoadmap = async (req, res) => {
   }
 };
 
-// ---------- API 3: Roadmap Fetch by ID ----------
+// API 3: Roadmap Fetch by ID
 const getRoadmapById = async (req, res) => {
   try {
     const userId = req.user?._id;
@@ -635,7 +197,7 @@ const getRoadmapById = async (req, res) => {
   }
 };
 
-// ---------- API 4: All roadmaps for logged-in user ----------
+// API 4: All roadmaps for logged-in user (sidebar)
 const getUserRoadmaps = async (req, res) => {
   try {
     const userId = req.user?._id;
@@ -652,7 +214,7 @@ const getUserRoadmaps = async (req, res) => {
   }
 };
 
-// ---------- API 5: Latest roadmap for logged-in user ----------
+// API 5: Latest roadmap for logged-in user (default load)
 const getLatestRoadmap = async (req, res) => {
   try {
     const userId = req.user?._id;
@@ -668,7 +230,7 @@ const getLatestRoadmap = async (req, res) => {
   }
 };
 
-// ---------- API 6: Delete roadmap by ID ----------
+// API 6: Delete roadmap by ID
 const deleteRoadmapById = async (req, res) => {
   try {
     const userId = req.user?._id;
@@ -678,24 +240,26 @@ const deleteRoadmapById = async (req, res) => {
       return res.status(400).json({ error: "Missing userId or roadmapId" });
     }
 
+    // Find and delete roadmap owned by this user
     const roadmap = await Roadmap.findOneAndDelete({ _id: roadmapId, userId });
 
     if (!roadmap) {
       return res.status(404).json({ error: "Roadmap not found" });
     }
 
-    await User.findByIdAndUpdate(userId, { $pull: { roadmaps: roadmapId } });
+    // Remove roadmap reference from User document
+    await User.findByIdAndUpdate(userId, {
+      $pull: { roadmaps: roadmapId },
+    });
 
-    res
-      .status(200)
-      .json({ success: true, message: "Roadmap deleted successfully" });
+    res.status(200).json({ success: true, message: "Roadmap deleted successfully" });
   } catch (err) {
     console.error("Roadmap delete error:", err);
     res.status(500).json({ error: "Failed to delete roadmap" });
   }
 };
 
-// ---------- API 7: Update step status & recalc progress ----------
+// API 7: Update step status & recalc progress
 const updateStepStatus = async (req, res) => {
   try {
     const userId = req.user?._id;
@@ -710,15 +274,15 @@ const updateStepStatus = async (req, res) => {
       return res.status(404).json({ error: "Roadmap not found" });
     }
 
+    // Update step status
     if (!roadmap.steps[stepIndex]) {
       return res.status(400).json({ error: "Invalid step index" });
     }
     roadmap.steps[stepIndex].status = status;
 
+    // Recalculate progress
     const totalSteps = roadmap.steps.length;
-    const completedSteps = roadmap.steps.filter(
-      (s) => s.status === "completed"
-    ).length;
+    const completedSteps = roadmap.steps.filter(s => s.status === "completed").length;
     roadmap.progress = Math.round((completedSteps / totalSteps) * 100);
 
     await roadmap.save();
@@ -734,8 +298,10 @@ module.exports = {
   analyzeSkillGap,
   generateRoadmap,
   getRoadmapById,
-  getUserRoadmaps,
+  getUserRoadmaps,   
   getLatestRoadmap,
   deleteRoadmapById,
-  updateStepStatus,
+  updateStepStatus
 };
+
+
