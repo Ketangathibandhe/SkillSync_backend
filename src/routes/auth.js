@@ -81,7 +81,7 @@ const jwt = require("jsonwebtoken");
 // Common cookie config
 const cookieOptions = {
   httpOnly: true,
-  secure: true,
+  secure: false,
   sameSite: "None",
   path: "/",
   maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
