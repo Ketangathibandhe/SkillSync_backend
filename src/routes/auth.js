@@ -7,11 +7,12 @@ const bcrypt = require("bcrypt");
 //  Common cookie config
 const cookieOptions = {
   httpOnly: true,
-  secure: true,       // Render/Vercel are HTTPS → keep true
-  sameSite: "None",   // allow cross-site cookies
-  path: "/",          // must match across set/clear
-  maxAge: 8 * 3600000 // 8 hours
+  secure: true,
+  sameSite: "None",
+  path: "/",
+  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
 };
+
 
 //  SIGNUP
 authRouter.post("/signup", async (req, res) => {
