@@ -38,7 +38,7 @@ const roadmapSchema = new mongoose.Schema(
       },
     ],
     rawText: {
-      type: String, // full markdown string from Gemini
+      type: String, 
       default: "",
     },
   },
