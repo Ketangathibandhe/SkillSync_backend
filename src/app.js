@@ -4,7 +4,9 @@ const express = require("express");
 const { connectDB } = require("./config/database");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
-
+app.get("/", (req, res) => {
+  res.send("SkillSync Backend Running 🚀");
+});
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
