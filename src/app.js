@@ -18,10 +18,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Allowed origins list — must match frontend exactly
+
 const allowedOrigins = [
-  "https://skillsync-6v8s.onrender.com", // your deployed frontend
-  "http://localhost:5173"                // local dev (optional)
+  "https://skillsync-6v8s.onrender.com", // deployed frontend
+  "http://localhost:5173"                
 ];
 
 //  CORS options with dynamic origin check
