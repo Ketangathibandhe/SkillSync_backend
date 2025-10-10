@@ -4,7 +4,7 @@ const Roadmap = require("../models/roadmap");
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
-// Helper: Gemini Call
+// Helper: Gemini Call (Skill Gap)
 const getSkillGapFromModel = async (targetRole, currentSkills) => {
   const prompt = `
 You're an expert career mentor helping someone become a ${targetRole}.
@@ -15,15 +15,15 @@ Please return the response in clean Markdown format with this exact structure:
 Missing Skills  
 1. Skill A  
 2. Skill B  
-3. Skill C  
+... (at least 6 items)
 
 Learning Priorities  
 1. Priority A  
 2. Priority B  
-3. Priority C  
+... (at least 6 items)
 
 Instructions:
-- Use plain text headings: Missing Skills and Learning Priorities (exact wording)
+- Use plain text headings: Missing Skills and Learning Priorities
 - Use numbered lists (1., 2., etc.)
 - No intro, no closing, no markdown symbols
 - Respond only with the above format
@@ -43,7 +43,7 @@ Instructions:
   const data = await response.json();
   const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
 
-  console.log("Gemini raw response:", rawText); // Debug log
+  console.log("Gemini raw skill gap:", rawText);
 
   if (!rawText || rawText.length < 10) {
     return `
@@ -51,11 +51,17 @@ Missing Skills
 1. System Design  
 2. API Security  
 3. Testing Strategies  
+4. CI/CD Pipelines  
+5. Caching Mechanisms  
+6. Database Indexing  
 
 Learning Priorities  
 1. Master scalable architecture  
 2. Learn OAuth and JWT  
 3. Practice integration testing  
+4. Implement Redis and Memcached  
+5. Explore Docker and Kubernetes  
+6. Study SQL optimization techniques  
 `;
   }
 
@@ -65,7 +71,8 @@ Learning Priorities
 // Helper: Roadmap Generation
 const getRoadmapFromModel = async (targetRole, skillGap) => {
   const prompt = `
-Create a comprehensive and detailed learning roadmap for becoming a ${targetRole}.
+You're a senior technical mentor. Create a comprehensive learning roadmap for becoming a ${targetRole}.
+
 Base it on the following skill gap:
 ${skillGap}
 
@@ -75,9 +82,9 @@ Instructions:
 - Each step must have:
   - "title"
   - "duration"
-  - "topics" (min 4)
+  - "topics" (min 5)
   - "resources" (min 3)
-  - "projects" (min 1)
+  - "projects" (min 2)
   - "status": "pending"
 `;
 
@@ -94,6 +101,8 @@ Instructions:
 
   const data = await response.json();
   let rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+
+  console.log("Gemini raw roadmap:", rawText);
 
   rawText = rawText
     .replace(/```json/g, "")
@@ -116,6 +125,34 @@ Instructions:
       console.error("Fallback parse also failed:", fallbackErr);
       parsed = { steps: [] };
     }
+  }
+
+  // Fallback if Gemini fails
+  if (!parsed.steps || parsed.steps.length === 0) {
+    parsed.steps = [
+      {
+        title: "System Design Fundamentals",
+        duration: "2-3 weeks",
+        topics: [
+          "Monolith vs Microservices",
+          "Load Balancing",
+          "Database Sharding",
+          "Caching Strategies",
+          "Rate Limiting"
+        ],
+        resources: [
+          "Grokking the System Design Interview",
+          "System Design Primer (GitHub)",
+          "Tech Dummies Podcast"
+        ],
+        projects: [
+          "Design a URL Shortener",
+          "Build a Scalable Chat App"
+        ],
+        status: "pending"
+      }
+    ];
+    rawText = JSON.stringify({ steps: parsed.steps }, null, 2);
   }
 
   return { steps: parsed.steps || [], rawText };
@@ -169,8 +206,7 @@ const analyzeSkillGap = async (req, res) => {
   }
 };
 
-
-//  API 2: Roadmap Creation
+// API 2: Roadmap Creation
 const generateRoadmap = async (req, res) => {
   try {
     const { targetRole, currentSkills } = req.body;
@@ -187,7 +223,7 @@ const generateRoadmap = async (req, res) => {
       userId,
       targetRole,
       currentSkills,
-      skillGap, // original string
+      skillGap,
       steps,
       rawText,
       progress: 0,
@@ -205,6 +241,7 @@ const generateRoadmap = async (req, res) => {
     res.status(500).json({ error: "Failed to generate roadmap" });
   }
 };
+
 
 // API 3: Roadmap Fetch by ID
 const getRoadmapById = async (req, res) => {
