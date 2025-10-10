@@ -4,21 +4,17 @@ const Roadmap = require("../models/roadmap");
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
-//Helper: Gemini Call
+// Helper: Gemini Call
 const getSkillGapFromModel = async (targetRole, currentSkills) => {
   const prompt = `
 You're an expert career mentor helping someone become a ${targetRole}.
 Current skills: ${currentSkills.join(", ")}.
 
 Please return the response in clean Markdown format with clear structure:
-- Use plain text headings like:  Missing Skills and  Learning Priorities
-- Make each heading visually distinct 
-- Use simple numbered list (1., 2., etc.) for bullet points, no asterisks (*)
-- Use numbered list (1., 2., etc.) for priorities
-- Do NOT use markdown symbols like # or *
-- Do NOT include any intro or closing statements
-
-Respond only with Markdown. Keep it visually clean, readable, and scannable.
+- Headings: Missing Skills and Learning Priorities
+- Use numbered lists (1., 2., etc.)
+- No intro or closing statements
+- Keep it readable and scannable
 `;
 
   const response = await fetch(
@@ -33,41 +29,33 @@ Respond only with Markdown. Keep it visually clean, readable, and scannable.
   );
 
   const data = await response.json();
-  return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+  const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+
+  if (!rawText || rawText.length < 10) {
+    console.error("Gemini returned empty or invalid response:", rawText);
+    return "";
+  }
+
+  return rawText;
 };
 
-//  Helper: Roadmap Generation
+// Helper: Roadmap Generation
 const getRoadmapFromModel = async (targetRole, skillGap) => {
   const prompt = `
-Create a **comprehensive and detailed learning roadmap** for becoming a ${targetRole}.
+Create a comprehensive and detailed learning roadmap for becoming a ${targetRole}.
 Base it on the following skill gap:
 ${skillGap}
 
- Important instructions:
-- Respond ONLY with valid JSON (no backticks, no markdown, no explanation).
-- Include at least 6-8 steps (phases).
-- Each step should have:
-  - "title": short clear name
-  - "duration": realistic time estimate (e.g. "2-4 weeks")
-  - "topics": a detailed list of subtopics (minimum 4–6 items)
-  - "resources": at least 3 high-quality resources (courses, books, articles, videos)
-  - "projects": at least 1–2 practical projects per step
-  - "status": default as "pending"
-
-Format strictly like this:
-
-{
-  "steps": [
-    {
-      "title": "Step Title",
-      "duration": "2-3 weeks",
-      "topics": ["Topic 1", "Topic 2", "Topic 3"],
-      "resources": ["Resource 1", "Resource 2", "Resource 3"],
-      "projects": ["Project 1"],
-      "status": "pending"
-    }
-  ]
-}
+Instructions:
+- Respond ONLY with valid JSON (no markdown, no explanation)
+- Include 6–8 steps
+- Each step must have:
+  - "title"
+  - "duration"
+  - "topics" (min 4)
+  - "resources" (min 3)
+  - "projects" (min 1)
+  - "status": "pending"
 `;
 
   const response = await fetch(
@@ -110,7 +98,7 @@ Format strictly like this:
   return { steps: parsed.steps || [], rawText };
 };
 
-//  Helper: Parse Skill Gap Markdown to JSON
+// Helper: Parse Skill Gap Markdown to JSON
 const parseSkillGapMarkdown = (markdown) => {
   const lines = markdown.split("\n").map((l) => l.trim());
   let missingSkills = [];
@@ -118,11 +106,11 @@ const parseSkillGapMarkdown = (markdown) => {
   let section = null;
 
   for (const line of lines) {
-    if (/^#?\s*Missing Skills/i.test(line)) {
+    if (/Missing\s+Skills|Skills\s+You\s+Need/i.test(line)) {
       section = "missing";
       continue;
     }
-    if (/^#?\s*Learning Priorities/i.test(line)) {
+    if (/Learning\s+Priorities|Top\s+Priorities/i.test(line)) {
       section = "priorities";
       continue;
     }
@@ -149,8 +137,8 @@ const analyzeSkillGap = async (req, res) => {
     const parsedGap = parseSkillGapMarkdown(gapString);
 
     res.json({
-      gapAnalysis: parsedGap, // JSON for frontend
-      rawGap: gapString, // Original string for roadmap use
+      gapAnalysis: parsedGap,
+      rawGap: gapString,
     });
   } catch (err) {
     console.error("Skill gap error:", err);
@@ -158,7 +146,7 @@ const analyzeSkillGap = async (req, res) => {
   }
 };
 
-//  API 2: Roadmap Creation
+// API 2: Roadmap Creation
 const generateRoadmap = async (req, res) => {
   try {
     const { targetRole, currentSkills } = req.body;
@@ -175,7 +163,7 @@ const generateRoadmap = async (req, res) => {
       userId,
       targetRole,
       currentSkills,
-      skillGap, // original string
+      skillGap,
       steps,
       rawText,
       progress: 0,
@@ -217,7 +205,7 @@ const getRoadmapById = async (req, res) => {
   }
 };
 
-// API 4: All roadmaps for logged-in user (sidebar)
+// API 4: All roadmaps for logged-in user
 const getUserRoadmaps = async (req, res) => {
   try {
     const userId = req.user?._id;
@@ -234,7 +222,7 @@ const getUserRoadmaps = async (req, res) => {
   }
 };
 
-// API 5: Latest roadmap for logged-in user (default load)
+// API 5: Latest roadmap for logged-in user
 const getLatestRoadmap = async (req, res) => {
   try {
     const userId = req.user?._id;
@@ -249,6 +237,7 @@ const getLatestRoadmap = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch latest roadmap" });
   }
 };
+
 
 // API 6: Delete roadmap by ID
 const deleteRoadmapById = async (req, res) => {
