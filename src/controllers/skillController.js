@@ -7,7 +7,7 @@ const GEMINI_API_URL =
 // Helper: Gemini Call (Skill Gap)
 const getSkillGapFromModel = async (targetRole, currentSkills) => {
   const prompt = `
-You're an expert career mentor helping someone become a ${targetRole}.
+You're a senior career mentor helping someone become a ${targetRole}.
 Current skills: ${currentSkills.join(", ")}.
 
 Please return the response in clean Markdown format with this exact structure:
@@ -15,12 +15,12 @@ Please return the response in clean Markdown format with this exact structure:
 Missing Skills  
 1. Skill A  
 2. Skill B  
-... (at least 6 items)
+... (at least 8–10 items)
 
 Learning Priorities  
 1. Priority A  
 2. Priority B  
-... (at least 6 items)
+... (at least 8–10 items)
 
 Instructions:
 - Use plain text headings: Missing Skills and Learning Priorities
@@ -50,18 +50,26 @@ Instructions:
 Missing Skills  
 1. System Design  
 2. API Security  
-3. Testing Strategies  
-4. CI/CD Pipelines  
-5. Caching Mechanisms  
-6. Database Indexing  
+3. CI/CD Pipelines  
+4. Caching Strategies  
+5. Database Indexing  
+6. OAuth & JWT  
+7. Docker & Containers  
+8. Microservices  
+9. Monitoring & Logging  
+10. Testing Strategies  
 
 Learning Priorities  
 1. Master scalable architecture  
-2. Learn OAuth and JWT  
-3. Practice integration testing  
-4. Implement Redis and Memcached  
-5. Explore Docker and Kubernetes  
-6. Study SQL optimization techniques  
+2. Learn Redis and Memcached  
+3. Implement CI/CD with GitHub Actions  
+4. Explore Docker and Kubernetes  
+5. Study SQL optimization techniques  
+6. Practice integration testing  
+7. Build microservices with Node.js  
+8. Secure APIs with OAuth2  
+9. Monitor apps with Prometheus  
+10. Write unit and E2E tests  
 `;
   }
 
@@ -78,7 +86,7 @@ ${skillGap}
 
 Instructions:
 - Respond ONLY with valid JSON (no markdown, no explanation)
-- Include 6–8 steps
+- Include 9–10 steps
 - Each step must have:
   - "title"
   - "duration"
@@ -128,30 +136,28 @@ Instructions:
   }
 
   // Fallback if Gemini fails
-  if (!parsed.steps || parsed.steps.length === 0) {
-    parsed.steps = [
-      {
-        title: "System Design Fundamentals",
-        duration: "2-3 weeks",
-        topics: [
-          "Monolith vs Microservices",
-          "Load Balancing",
-          "Database Sharding",
-          "Caching Strategies",
-          "Rate Limiting"
-        ],
-        resources: [
-          "Grokking the System Design Interview",
-          "System Design Primer (GitHub)",
-          "Tech Dummies Podcast"
-        ],
-        projects: [
-          "Design a URL Shortener",
-          "Build a Scalable Chat App"
-        ],
-        status: "pending"
-      }
-    ];
+  if (!parsed.steps || parsed.steps.length < 9) {
+    parsed.steps = Array.from({ length: 10 }, (_, i) => ({
+      title: `Phase ${i + 1}: Core Backend Concept ${i + 1}`,
+      duration: "2-3 weeks",
+      topics: [
+        "Topic A",
+        "Topic B",
+        "Topic C",
+        "Topic D",
+        "Topic E"
+      ],
+      resources: [
+        "Resource 1",
+        "Resource 2",
+        "Resource 3"
+      ],
+      projects: [
+        "Project 1",
+        "Project 2"
+      ],
+      status: "pending"
+    }));
     rawText = JSON.stringify({ steps: parsed.steps }, null, 2);
   }
 
