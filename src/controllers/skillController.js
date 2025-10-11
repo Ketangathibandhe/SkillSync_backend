@@ -1,8 +1,7 @@
 const User = require("../models/user");
 const Roadmap = require("../models/roadmap");
 
-const GEMINI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 // Helper: Gemini Call (Skill Gap)
 const getSkillGapFromModel = async (targetRole, currentSkills) => {
